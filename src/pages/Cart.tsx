@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingCart, Zap, BadgePercent, X, ShieldCheck, Truck } from 'lucide-react';
 import { useApp } from '../lib/AppContext';
+import type { ProductVariant } from '../lib/types';
 import { productCategoryMembershipIds } from '../lib/categories';
 import { lineTotal, unitPrice, validateCoupon } from '../lib/db';
 import { fmtPrice } from '../lib/i18n';
@@ -24,7 +25,7 @@ export function Cart() {
     if (!p) return null;
     const v = p.variants.find((x) => x.id === l.variantId);
     return { line: l, product: p, variant: v, price: unitPrice(p, l.variantId), total: lineTotal(p, l.variantId, l.qty) };
-  }).filter(Boolean) as { line: { productId: string; variantId: string | null; qty: number }; product: NonNullable<ReturnType<typeof db.products.find>>; variant: { id: string; label: string; priceDelta: number; stock: number } | undefined; price: number; total: number }[];
+  }).filter(Boolean) as { line: { productId: string; variantId: string | null; qty: number }; product: NonNullable<ReturnType<typeof db.products.find>>; variant: ProductVariant | undefined; price: number; total: number }[];
 
   const subtotal = rows.reduce((s, r) => s + r.total, 0);
   const items = rows.map((r) => ({ productId: r.product.id, categoryId: r.product.categoryId, categoryIds: productCategoryMembershipIds(db.categories, r.product), qty: r.line.qty, unitPrice: r.price }));
