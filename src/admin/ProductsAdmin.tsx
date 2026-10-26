@@ -1,10 +1,10 @@
 // BLITZ GAMING — admin: products (search, bulk actions, full editor with variants)
 import { useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Archive, Eye, EyeOff, Pencil, Copy, X, Package, ImagePlus, Upload, Tag } from 'lucide-react';
+import { Plus, Search, Trash2, Archive, Eye, EyeOff, Pencil, Copy, X, Package, ImagePlus, Upload, Tag, Save } from 'lucide-react';
 import { useApp } from '../lib/AppContext';
 import { Button, Input, Select, TextArea, Modal, SectionTitle, EmptyState } from '../components/ui';
 import { fmtPrice } from '../lib/i18n';
-import type { Product, ProductVariant } from '../lib/types';
+import type { Product, ProductVariant, VariantTemplate } from '../lib/types';
 
 function parseVariantAttributes(value: string): Record<string, string> {
   return Object.fromEntries(value.split(';').map((part) => part.trim()).filter(Boolean).map((part) => { const index = part.indexOf('='); return index < 0 ? ['', ''] : [part.slice(0, index).trim(), part.slice(index + 1).trim()]; }).filter(([key, val]) => Boolean(key && val)));
@@ -211,13 +211,14 @@ export function StatusBadge({ status, ar }: { status: Product['status']; ar: boo
 }
 
 function ProductEditor({ product, isNew, onClose, onSave }: { product: Product | null; isNew: boolean; onClose: () => void; onSave: (p: Product) => void }) {
-  const { db, lang } = useApp();
+  const { db, lang, setDb, toast } = useApp();
   const ar = lang === 'ar';
   const [p, setP] = useState<Product | null>(product);
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
   const [customTag, setCustomTag] = useState('');
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [templateToAdd, setTemplateToAdd] = useState('');
 
   // reset when product changes
   if (product && p?.id !== product.id) setP(product);
@@ -226,6 +227,24 @@ function ProductEditor({ product, isNew, onClose, onSave }: { product: Product |
 
   const set = (patch: Partial<Product>) => setP({ ...p, ...patch });
   const addVariant = () => set({ variants: [...p.variants, { id: `v-${Date.now()}`, label: '', priceDelta: 0, stock: 0 }] });
+  const addVariantTemplate = (templateId: string) => {
+    const template = (db.store.variantTemplates ?? []).find((item) => item.id === templateId);
+    if (!template) return;
+    set({ variants: [...p.variants, { ...template.variant, id: `v-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, stock: 0, imageIndex: undefined }] });
+    setTemplateToAdd('');
+    toast('success', ar ? 'تمت إضافة قالب الخيار. حدّث الصورة والمخزون لهذا المنتج.' : 'Variant preset added. Set this product’s image and stock.');
+  };
+  const saveVariantTemplate = (variantId: string) => {
+    const variant = p.variants.find((item) => item.id === variantId);
+    if (!variant) return;
+    const defaultName = variant.labelEn?.trim() || variant.label.trim() || variant.optionNameEn || variant.optionName || 'Variant preset';
+    const name = window.prompt(ar ? 'اسم القالب القابل لإعادة الاستخدام' : 'Name this reusable variant preset', defaultName)?.trim();
+    if (!name) return;
+    const { id: _id, stock: _stock, imageIndex: _imageIndex, ...variantData } = variant;
+    const preset: VariantTemplate = { id: `variant-template-${Date.now()}`, name, variant: variantData };
+    setDb((old) => ({ ...old, store: { ...old.store, variantTemplates: [...(old.store.variantTemplates ?? []).filter((x) => x.name.toLowerCase() !== name.toLowerCase()), preset] } }));
+    toast('success', ar ? 'تم حفظ قالب الخيار ويمكن استخدامه في منتجات أخرى.' : 'Reusable variant preset saved for other products.');
+  };
   const updateVariant = (id: string, patch: Partial<ProductVariant>) => set({ variants: p.variants.map((v) => (v.id === id ? { ...v, ...patch } : v)) });
   const removeVariant = (id: string) => set({ variants: p.variants.filter((v) => v.id !== id) });
   const addSpec = () => { if (specKey.trim() && specValue.trim()) { set({ specs: [...p.specs, { key: specKey.trim(), value: specValue.trim() }] }); setSpecKey(''); setSpecValue(''); } };
@@ -340,6 +359,7 @@ function ProductEditor({ product, isNew, onClose, onSave }: { product: Product |
 
         {/* variants */}
         <div>
+          {(db.store.variantTemplates ?? []).length > 0 && <div className="mb-3 rounded-xl border border-line bg-panel2 p-3"><label className="block text-[10px] font-bold text-mute">{ar ? 'استخدم قالب خيار محفوظ' : lang === 'he' ? 'הוסף תבנית וריאנט שמורה' : 'Add a saved variant preset'}<select value={templateToAdd} onChange={(e) => { const id = e.target.value; if (id) addVariantTemplate(id); }} className="mt-1 h-10 w-full rounded-lg border border-line bg-panel px-3 text-[11px] text-white"><option value="">{ar ? 'اختر قالباً لإضافته' : 'Choose a preset to add'}</option>{(db.store.variantTemplates ?? []).map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label><p className="mt-1 text-[9px] text-mute">{ar ? 'تُعاد استخدام الأسماء والخصائص وتعديل السعر؛ يبدأ المخزون دون كمية وتُختار صورة هذا المنتج بشكل منفصل.' : 'Labels, attributes and price adjustment are reused; stock resets to zero and linked images are selected for this product separately.'}</p></div>}
           <div className="mb-1.5 flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide text-white/70">{ar ? 'المتغيرات (لون، سويتش، حجم…)' : 'Variants (color, switch, size…)'}</span>
             <button onClick={addVariant} className="flex h-7 items-center gap-1 rounded-lg border border-line px-2 text-[10px] font-bold text-electric hover:border-electric"><Plus size={12} />{ar ? 'متغير' : 'Variant'}</button>
@@ -348,15 +368,23 @@ function ProductEditor({ product, isNew, onClose, onSave }: { product: Product |
             {p.variants.map((v) => (
               <div key={v.id} className="rounded-xl border border-line bg-panel2 p-3">
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  <Input label={ar ? 'اسم الخيار الظاهر' : 'Displayed variant label'} value={v.label} onChange={(e) => updateVariant(v.id, { label: e.target.value })} placeholder="Black / Wireless / Red Switch" />
-                  <Input label={ar ? 'اسم الخاصية (اختياري)' : 'Option name (optional)'} value={v.optionName ?? ''} onChange={(e) => updateVariant(v.id, { optionName: e.target.value })} placeholder="Color / Connection / Switch" />
-                  <Input label={ar ? 'قيمة الخاصية (اختياري)' : 'Option value (optional)'} value={v.optionValue ?? ''} onChange={(e) => updateVariant(v.id, { optionValue: e.target.value })} placeholder="Black / Wireless / Red" />
-                  <Input label={ar ? 'خصائص الفلترة المتعددة' : 'Filter attributes (Name=Value; …)'} value={stringifyVariantAttributes(v.attributes)} onChange={(e) => updateVariant(v.id, { attributes: parseVariantAttributes(e.target.value) })} placeholder="Color=White; Layout=60%" />
+                  <Input label="Variant label (EN)" value={v.labelEn ?? v.label} onChange={(e) => updateVariant(v.id, { labelEn: e.target.value, label: e.target.value })} placeholder="Black / Wireless / Red Switch" />
+                  <Input label="اسم الخيار (AR)" value={v.labelAr ?? ''} onChange={(e) => updateVariant(v.id, { labelAr: e.target.value })} dir="rtl" placeholder="أسود / لاسلكي" />
+                  <Input label="שם האפשרות (HE)" value={v.labelHe ?? ''} onChange={(e) => updateVariant(v.id, { labelHe: e.target.value })} dir="rtl" placeholder="שחור / אלחוטי" />
+                  <Input label="Option name (EN)" value={v.optionNameEn ?? v.optionName ?? ''} onChange={(e) => updateVariant(v.id, { optionNameEn: e.target.value, optionName: e.target.value })} placeholder="Color / Connection / Switch" />
+                  <Input label="اسم الخاصية (AR)" value={v.optionNameAr ?? ''} onChange={(e) => updateVariant(v.id, { optionNameAr: e.target.value })} dir="rtl" placeholder="اللون / الاتصال" />
+                  <Input label="שם המאפיין (HE)" value={v.optionNameHe ?? ''} onChange={(e) => updateVariant(v.id, { optionNameHe: e.target.value })} dir="rtl" placeholder="צבע / חיבור" />
+                  <Input label="Option value (EN)" value={v.optionValueEn ?? v.optionValue ?? ''} onChange={(e) => updateVariant(v.id, { optionValueEn: e.target.value, optionValue: e.target.value })} placeholder="Black / Wireless / Red" />
+                  <Input label="قيمة الخاصية (AR)" value={v.optionValueAr ?? ''} onChange={(e) => updateVariant(v.id, { optionValueAr: e.target.value })} dir="rtl" placeholder="أسود / لاسلكي / أحمر" />
+                  <Input label="ערך המאפיין (HE)" value={v.optionValueHe ?? ''} onChange={(e) => updateVariant(v.id, { optionValueHe: e.target.value })} dir="rtl" placeholder="שחור / אלחוטי" />
+                  <Input label="Filter attributes (EN)" value={stringifyVariantAttributes(v.attributesEn ?? v.attributes)} onChange={(e) => { const attrs = parseVariantAttributes(e.target.value); updateVariant(v.id, { attributesEn: attrs, attributes: attrs }); }} placeholder="Color=White; Layout=60%" />
+                  <Input label="خصائص الفلترة (AR)" value={stringifyVariantAttributes(v.attributesAr)} onChange={(e) => updateVariant(v.id, { attributesAr: parseVariantAttributes(e.target.value) })} dir="rtl" placeholder="اللون=أبيض; الحجم=60%" />
+                  <Input label="מאפייני סינון (HE)" value={stringifyVariantAttributes(v.attributesHe)} onChange={(e) => updateVariant(v.id, { attributesHe: parseVariantAttributes(e.target.value) })} dir="rtl" placeholder="צבע=לבן; פריסה=60%" />
                   <Input label={ar ? 'تغيير السعر (+ أو - شيكل)' : 'Price adjustment (+/- ILS)'} type="number" step="0.01" value={v.priceDelta} onChange={(e) => updateVariant(v.id, { priceDelta: Number(e.target.value) || 0 })} />
                   <Input label={ar ? 'مخزون هذا الخيار' : 'Variant stock'} type="number" min={0} value={v.stock} onChange={(e) => updateVariant(v.id, { stock: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
                   <label className="text-[10px] font-bold text-mute">{ar ? 'الصورة المرتبطة' : 'Linked gallery image'}<select value={v.imageIndex === undefined ? '' : String(v.imageIndex)} onChange={(e) => updateVariant(v.id, { imageIndex: e.target.value === '' ? undefined : Number(e.target.value) })} className="mt-1 h-10 w-full rounded-lg border border-line bg-panel px-2 text-[10px] text-white outline-none focus:border-electric"><option value="">{ar ? 'لا توجد صورة مرتبطة' : 'No linked image'}</option>{p.images.map((image, index) => <option key={`${index}-${image.slice(0, 12)}`} value={index}>{index + 1}. {image.length > 32 ? `${image.slice(0, 32)}…` : image}</option>)}</select></label>
                 </div>
-                <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[9px] text-mute">{ar ? 'السعر النهائي = سعر المنتج + تعديل هذا الخيار، ولا يصبح السعر أقل من صفر.' : 'Final price = product price + this option adjustment; final price never goes below zero.'}</span><button onClick={() => removeVariant(v.id)} className="rounded-lg border border-red-500/30 p-2 text-red-400 hover:bg-red-500/10" title={ar ? 'حذف الخيار' : 'Remove variant'}><Trash2 size={14} /></button></div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2"><span className="flex-1 text-[9px] text-mute">{ar ? 'السعر النهائي = سعر المنتج + تعديل هذا الخيار، ولا يصبح السعر أقل من صفر.' : 'Final price = product price + this option adjustment; final price never goes below zero.'}</span><Button variant="outline" size="sm" onClick={() => saveVariantTemplate(v.id)}><Save size={12}/>{ar ? 'حفظ كقالب' : 'Save as reusable preset'}</Button><button onClick={() => removeVariant(v.id)} className="rounded-lg border border-red-500/30 p-2 text-red-400 hover:bg-red-500/10" title={ar ? 'حذف الخيار' : 'Remove variant'}><Trash2 size={14} /></button></div>
               </div>
             ))}
           </div>

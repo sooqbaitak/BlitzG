@@ -68,7 +68,7 @@ export function Shop() {
     if (inStockOnly) list = list.filter(productIsAvailable);
     if (maxPrice > 0) list = list.filter((p) => (p.salePrice ?? p.price) <= maxPrice);
     const selectedAttributes = Object.keys(selectedVariantFilters);
-    if (selectedAttributes.length) list = list.filter((p) => p.variants.some((v) => variantMatches(v, selectedVariantFilters)));
+    if (selectedAttributes.length) list = list.filter((p) => p.variants.some((v) => variantMatches(v, selectedVariantFilters, lang)));
 
     switch (sort) {
       case 'price-asc': list = [...list].sort((a, b) => (a.salePrice ?? a.price) - (b.salePrice ?? b.price)); break;
@@ -95,7 +95,7 @@ export function Shop() {
     if (maxPrice > 0) list = list.filter((p) => (p.salePrice ?? p.price) <= maxPrice);
     return list;
   }, [db.products, db.brands, q, categoryIds, brandSlug, tag, onSale, inStockOnly, maxPrice]);
-  const dynamicVariantFacets = useMemo(() => variantFacets(variantFacetProducts.flatMap((p) => p.variants)), [variantFacetProducts]);
+  const dynamicVariantFacets = useMemo(() => variantFacets(variantFacetProducts.flatMap((p) => p.variants), lang), [variantFacetProducts, lang]);
 
   const shown = filtered.slice(0, page * PAGE_SIZE);
   const priceCeiling = Math.max(...db.products.map((p) => p.price));

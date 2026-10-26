@@ -17,7 +17,7 @@ export function CategoryPage() {
   const products = useMemo(() => {
     if (!category) return [];
     const ids = categoryTreeIds(db.categories, category.id);
-    return db.products.filter((p) => p.status === 'active' && productMatchesCategoryTree(p, ids)).filter((p) => !Object.keys(variantFilters).length || p.variants.some((v) => variantMatches(v, variantFilters))).sort((a, b) => Number(b.tags.includes('featured')) - Number(a.tags.includes('featured')));
+    return db.products.filter((p) => p.status === 'active' && productMatchesCategoryTree(p, ids)).filter((p) => !Object.keys(variantFilters).length || p.variants.some((v) => variantMatches(v, variantFilters, lang))).sort((a, b) => Number(b.tags.includes('featured')) - Number(a.tags.includes('featured')));
   }, [category, db.categories, db.products, variantFilters]);
 
   if (!category) return <Navigate to="/shop" replace />;
@@ -26,7 +26,7 @@ export function CategoryPage() {
   const children = db.categories.filter((c) => c.parentId === category.id && c.visible);
   const categoryIdsForFacets = categoryTreeIds(db.categories, category.id);
   const facetProducts = db.products.filter((p) => p.status === 'active' && productMatchesCategoryTree(p, categoryIdsForFacets));
-  const facets = variantFacets(facetProducts.flatMap((p) => p.variants));
+  const facets = variantFacets(facetProducts.flatMap((p) => p.variants), lang);
 
   return (
     <div className="mx-auto max-w-7xl px-3 py-5 sm:px-4">

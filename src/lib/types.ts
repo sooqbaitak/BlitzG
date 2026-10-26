@@ -28,6 +28,19 @@ export interface Brand {
 export interface ProductVariant {
   id: string;
   label: string;
+  /** Optional localized customer-facing labels; fall back to label when blank. */
+  labelEn?: string;
+  labelAr?: string;
+  labelHe?: string;
+  optionNameEn?: string;
+  optionNameAr?: string;
+  optionNameHe?: string;
+  optionValueEn?: string;
+  optionValueAr?: string;
+  optionValueHe?: string;
+  attributesEn?: Record<string, string>;
+  attributesAr?: Record<string, string>;
+  attributesHe?: Record<string, string>;
   priceDelta: number; // add-on on top of base price (ILS)
   stock: number;
   /** Optional attribute group/value used by customizable variant selectors. */
@@ -37,6 +50,23 @@ export interface ProductVariant {
   imageIndex?: number;
   /** Optional multi-attribute variant facets, e.g. { Color: 'White', Layout: '60%' }. */
   attributes?: Record<string, string>;
+}
+
+export interface VariantTemplate {
+  id: string;
+  name: string;
+  variant: Omit<ProductVariant, 'id' | 'stock'>;
+}
+
+export interface OfferCollection {
+  id: string;
+  name: string;
+  tag: string;
+  active: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  /** Product IDs mapped to the special price for this offer. */
+  productPrices: Record<string, number>;
 }
 
 export interface Product {
@@ -128,6 +158,8 @@ export interface Order {
   buildPreference?: 'assemble' | 'parts';
   userId?: string;
   loyaltyPointsEarned?: number;
+  /** Points redeemed against this order, if loyalty redemption was used. */
+  loyaltyPointsRedeemed?: number;
   personalDiscount?: number;
   city: string;
   address: string;
@@ -196,13 +228,18 @@ export interface StoreAppearance {
 }
 
 export type CampaignPlacement = 'top-banner' | 'floating' | 'modal';
-export type CampaignAnimation = 'fade' | 'slide' | 'pulse' | 'none';
+export type CampaignAnimation = 'fade' | 'slide' | 'pulse' | 'bounce' | 'glow' | 'none';
 export interface SeasonalCampaign {
   id: string; active: boolean; placement: CampaignPlacement; animation: CampaignAnimation;
   titleEn: string; titleAr: string; titleHe?: string; messageEn: string; messageAr: string; messageHe?: string;
   imageUrl?: string; linkUrl?: string; backgroundColor: string; textColor: string;
   fontFamily?: string; fontSize?: number; animationDurationSeconds?: number;
+  position?: 'start-top' | 'end-top' | 'start-bottom' | 'end-bottom';
+  widthPreset?: 'compact' | 'standard' | 'wide';
+  borderRadiusPx?: number;
   startsAt?: string; endsAt?: string; pageTargets: string[]; dismissible: boolean;
+  /** Optional named offer collection associated with this campaign. */
+  offerCollectionId?: string;
 }
 
 export type MobileBottomBarItemId = 'home' | 'shop' | 'account' | 'wishlist' | 'cart' | 'whatsapp' | 'track' | 'build' | 'theme';
@@ -251,6 +288,12 @@ export interface StoreSettings {
   announcementPauseOnHover?: boolean;
   announcementShowIcon?: boolean;
   theme?: 'night' | 'day';
+  /** Admin dashboard theme, independent from the customer storefront theme. */
+  adminTheme?: 'night' | 'day';
+  /** Reusable localized variant templates saved by admins. */
+  variantTemplates?: VariantTemplate[];
+  /** Named multi-product offers used by the Offers page and campaign links. */
+  offerCollections?: OfferCollection[];
   /** If disabled, visitors use the store's default theme. */
   allowCustomerThemeToggle?: boolean;
   appearance?: StoreAppearance;

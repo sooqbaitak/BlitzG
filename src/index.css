@@ -71,19 +71,19 @@ input[type=number] { -moz-appearance: textfield; }
   --color-mute: #596579;
 }
 :root[data-theme="day"] body { color: var(--blitz-text, #182334); }
-:root[data-theme="day"] .text-white,
-:root[data-theme="day"] [class*="text-white/"] { color: var(--blitz-text, #182334) !important; }
-:root[data-theme="day"] .bg-ink,
-:root[data-theme="day"] [class~="bg-ink/95"],
-:root[data-theme="day"] [class~="bg-ink/90"] { background-color: var(--color-ink) !important; }
-:root[data-theme="day"] .bg-panel { background-color: var(--color-panel) !important; }
-:root[data-theme="day"] .bg-panel2 { background-color: var(--color-panel2) !important; }
-:root[data-theme="day"] .bg-panel3 { background-color: var(--color-panel3) !important; }
-:root[data-theme="day"] .border-line { border-color: var(--color-line) !important; }
-:root[data-theme="day"] .text-mute { color: var(--color-mute) !important; }
-:root[data-theme="day"] .marquee-track { color: inherit; }
-:root[data-theme="day"] .shimmer { background: linear-gradient(110deg, #eef2f7 8%, #dfe7f2 30%, #eef2f7 55%); background-size: 200% 100%; }
-:root[data-theme="day"] .card-glow { box-shadow: 0 4px 20px rgba(20,40,70,.07); }
+:root[data-theme="day"] .storefront-shell .text-white,
+:root[data-theme="day"] .storefront-shell [class*="text-white/"] { color: var(--blitz-text, #182334) !important; }
+:root[data-theme="day"] .storefront-shell .bg-ink,
+:root[data-theme="day"] .storefront-shell [class~="bg-ink/95"],
+:root[data-theme="day"] .storefront-shell [class~="bg-ink/90"] { background-color: var(--color-ink) !important; }
+:root[data-theme="day"] .storefront-shell .bg-panel { background-color: var(--color-panel) !important; }
+:root[data-theme="day"] .storefront-shell .bg-panel2 { background-color: var(--color-panel2) !important; }
+:root[data-theme="day"] .storefront-shell .bg-panel3 { background-color: var(--color-panel3) !important; }
+:root[data-theme="day"] .storefront-shell .border-line { border-color: var(--color-line) !important; }
+:root[data-theme="day"] .storefront-shell .text-mute { color: var(--color-mute) !important; }
+:root[data-theme="day"] .storefront-shell .marquee-track { color: inherit; }
+:root[data-theme="day"] .storefront-shell .shimmer { background: linear-gradient(110deg, #eef2f7 8%, #dfe7f2 30%, #eef2f7 55%); background-size: 200% 100%; }
+:root[data-theme="day"] .storefront-shell .card-glow { box-shadow: 0 4px 20px rgba(20,40,70,.07); }
 
 /* Announcement bar pauses on hover when enabled in admin settings. */
 .announcement-pause-on-hover:hover .marquee-track { animation-play-state: paused; }
@@ -102,8 +102,8 @@ input[type=number] { -moz-appearance: textfield; }
 }
 .mobile-bottom-nav > div { min-height: 57px; }
 .mobile-bottom-nav a, .mobile-bottom-nav button { touch-action: manipulation; }
-:root[data-theme="day"] .mobile-bottom-nav { background: rgba(255,255,255,.97); border-color: var(--color-line); }
-:root[data-theme="day"] .mobile-bottom-nav .text-white\/70 { color: #526074 !important; }
+:root[data-theme="day"] .storefront-shell .mobile-bottom-nav { background: rgba(255,255,255,.97); border-color: var(--color-line); }
+:root[data-theme="day"] .storefront-shell .mobile-bottom-nav .text-white\/70 { color: #526074 !important; }
 
 /* Admin-controlled global appearance tokens. */
 body { color: var(--blitz-text, #f4f4f6); }
@@ -131,3 +131,116 @@ html[data-text-scale="large"] { font-size: 17px; }
 :root[data-button-style="gradient"] .storefront-shell .bg-electric { background: linear-gradient(100deg, var(--color-electric), var(--color-violet-accent)) !important; }
 :root[data-button-style="outline"] .storefront-shell .bg-electric { color: var(--color-electric) !important; background: transparent !important; border: 1px solid var(--color-electric) !important; box-shadow: none !important; }
 :root[data-button-style="outline"] .storefront-shell .bg-electric:hover { color: var(--color-ink) !important; background: var(--color-electric) !important; }
+
+
+/* Theme isolation and contrast fixes: storefront Day mode never changes the admin theme. */
+:root[data-theme="day"] .storefront-shell .text-white,
+:root[data-theme="day"] .storefront-shell [class*="text-white/"] { color: #263449 !important; }
+:root[data-theme="day"] .storefront-shell .bg-electric.text-white { color: #071321 !important; }
+:root[data-theme="day"] .storefront-shell [class*="bg-red-"].text-white,
+:root[data-theme="day"] .storefront-shell [class*="bg-violet-"].text-white,
+:root[data-theme="day"] .storefront-shell .bg-gradient-to-br.text-white,
+:root[data-theme="day"] .storefront-shell .bg-gradient-to-r.text-white,
+
+:root[data-theme="day"] .storefront-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:root[data-theme="day"] .storefront-shell select,
+:root[data-theme="day"] .storefront-shell textarea { color: #182334 !important; background-color: #fff !important; border-color: #cbd5e1 !important; }
+:root[data-theme="day"] .storefront-shell input::placeholder,
+:root[data-theme="day"] .storefront-shell textarea::placeholder { color: #64748b !important; opacity: 1; }
+:root[data-theme="day"] .storefront-shell option { color: #182334; background: #fff; }
+
+/* Admin's Day/Night palette is local to the admin shell and independent of the customer preference. */
+.admin-shell[data-admin-theme="day"] {
+  --color-ink: #f4f7fb;
+  --color-panel: #ffffff;
+  --color-panel2: #eef2f7;
+  --color-panel3: #e2e8f0;
+  --color-line: #d7deea;
+  --color-electric: #006bb6;
+  --color-electric-dim: #005b9c;
+  --color-violet-accent: #6d35c9;
+  --color-mute: #526074;
+  color: #182334 !important;
+  background-color: #f4f7fb !important;
+}
+.admin-shell[data-admin-theme="day"] .text-white,
+.admin-shell[data-admin-theme="day"] [class*="text-white/"] { color: #243247 !important; }
+.admin-shell[data-admin-theme="day"] .text-white\/70,
+.admin-shell[data-admin-theme="day"] .text-white\/75,
+.admin-shell[data-admin-theme="day"] .text-white\/80,
+.admin-shell[data-admin-theme="day"] .text-white\/85,
+.admin-shell[data-admin-theme="day"] .text-white\/90 { color: #34445b !important; }
+.admin-shell[data-admin-theme="day"] .text-electric { color: #006bb6 !important; }
+.admin-shell[data-admin-theme="day"] .bg-ink,
+.admin-shell[data-admin-theme="day"] [class~="bg-ink/95"],
+.admin-shell[data-admin-theme="day"] [class~="bg-ink/90"] { background-color: #f4f7fb !important; }
+.admin-shell[data-admin-theme="day"] .bg-panel { background-color: #fff !important; }
+.admin-shell[data-admin-theme="day"] .bg-panel2 { background-color: #eef2f7 !important; }
+.admin-shell[data-admin-theme="day"] .bg-panel3 { background-color: #e2e8f0 !important; }
+.admin-shell[data-admin-theme="day"] .border-line { border-color: #d7deea !important; }
+.admin-shell[data-admin-theme="day"] .text-mute { color: #526074 !important; }
+.admin-shell[data-admin-theme="day"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-shell[data-admin-theme="day"] select,
+.admin-shell[data-admin-theme="day"] textarea { color: #182334 !important; background-color: #fff !important; border-color: #cbd5e1 !important; }
+.admin-shell[data-admin-theme="day"] input::placeholder,
+.admin-shell[data-admin-theme="day"] textarea::placeholder { color: #64748b !important; opacity: 1; }
+.admin-shell[data-admin-theme="day"] option { color: #182334; background: #fff; }
+.admin-shell[data-admin-theme="day"] .bg-electric.text-white { color: #071321 !important; }
+.admin-shell[data-admin-theme="day"] [class*="bg-red-"].text-white,
+.admin-shell[data-admin-theme="day"] [class*="bg-violet-"].text-white,
+.admin-shell[data-admin-theme="day"] .bg-gradient-to-br.text-white { color: #fff !important; }
+.admin-shell[data-admin-theme="night"] {
+  --color-ink: #0a0a0c;
+  --color-panel: #111114;
+  --color-panel2: #17171c;
+  --color-panel3: #1e1e25;
+  --color-line: #24242c;
+  --color-electric: #00a8ff;
+  --color-electric-dim: #0088d4;
+  --color-violet-accent: #8b5cf6;
+  --color-mute: #8b8b98;
+  color: #f4f4f6 !important;
+  background-color: #0a0a0c !important;
+}
+.admin-shell[data-admin-theme="night"] .text-white { color: #f4f4f6 !important; }
+.admin-shell[data-admin-theme="night"] .text-mute { color: #8b8b98 !important; }
+.admin-shell[data-admin-theme="night"] .text-electric { color: #00a8ff !important; }
+.admin-shell[data-admin-theme="night"] .bg-ink { background-color: #0a0a0c !important; }
+.admin-shell[data-admin-theme="night"] .bg-panel { background-color: #111114 !important; }
+.admin-shell[data-admin-theme="night"] .bg-panel2 { background-color: #17171c !important; }
+.admin-shell[data-admin-theme="night"] .bg-panel3 { background-color: #1e1e25 !important; }
+.admin-shell[data-admin-theme="night"] .border-line { border-color: #24242c !important; }
+.admin-shell[data-admin-theme="night"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-shell[data-admin-theme="night"] select,
+.admin-shell[data-admin-theme="night"] textarea { color: #f4f4f6 !important; background-color: #17171c !important; border-color: #24242c !important; }
+.admin-shell[data-admin-theme="night"] input::placeholder,
+.admin-shell[data-admin-theme="night"] textarea::placeholder { color: #8b8b98 !important; opacity: 1; }
+
+
+@keyframes campaign-bounce { 0% { opacity: 0; transform: translateY(18px) scale(.96); } 65% { opacity: 1; transform: translateY(-3px) scale(1.01); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes campaign-glow { 0%,100% { box-shadow: 0 0 0 rgba(0,168,255,0); } 50% { box-shadow: 0 0 24px rgba(0,168,255,.2); } }
+
+/* High-contrast semantic colors for the customer-facing Day theme. */
+:root[data-theme="day"] .storefront-shell .text-electric { color: #0066ad !important; }
+:root[data-theme="day"] .storefront-shell .text-emerald-300,
+:root[data-theme="day"] .storefront-shell .text-emerald-400,
+:root[data-theme="day"] .storefront-shell .text-emerald-500 { color: #087443 !important; }
+:root[data-theme="day"] .storefront-shell .text-red-300,
+:root[data-theme="day"] .storefront-shell .text-red-400 { color: #b42318 !important; }
+:root[data-theme="day"] .storefront-shell .text-amber-200,
+:root[data-theme="day"] .storefront-shell .text-amber-300,
+:root[data-theme="day"] .storefront-shell .text-amber-400 { color: #8a4b00 !important; }
+:root[data-theme="day"] .storefront-shell .text-violet-300,
+:root[data-theme="day"] .storefront-shell .text-violet-400 { color: #6d35c9 !important; }
+:root[data-theme="day"] .storefront-shell .text-pink-400 { color: #be185d !important; }
+.admin-shell[data-admin-theme="day"] .text-emerald-300,
+.admin-shell[data-admin-theme="day"] .text-emerald-400,
+.admin-shell[data-admin-theme="day"] .text-emerald-500 { color: #087443 !important; }
+.admin-shell[data-admin-theme="day"] .text-red-300,
+.admin-shell[data-admin-theme="day"] .text-red-400 { color: #b42318 !important; }
+.admin-shell[data-admin-theme="day"] .text-amber-200,
+.admin-shell[data-admin-theme="day"] .text-amber-300,
+.admin-shell[data-admin-theme="day"] .text-amber-400 { color: #8a4b00 !important; }
+.admin-shell[data-admin-theme="day"] .text-violet-300,
+.admin-shell[data-admin-theme="day"] .text-violet-400 { color: #6d35c9 !important; }
+.admin-shell[data-admin-theme="day"] .text-pink-400 { color: #be185d !important; }

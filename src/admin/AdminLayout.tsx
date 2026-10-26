@@ -1,9 +1,9 @@
 // BLITZ GAMING — admin layout: session guard, role permissions, sidebar
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, FolderTree, Tag, Boxes, ShoppingBag, Users, TicketPercent,
-  FileSpreadsheet, Home, FileText, Truck, Settings, ShieldCheck, LogOut, ExternalLink, Menu, X, Zap, Cloud, AlertTriangle, SlidersHorizontal, BarChart3, Sun, Moon, Languages, Type, Palette, CalendarClock, Flame,
+  FileSpreadsheet, Home, FileText, Truck, Settings, ShieldCheck, LogOut, ExternalLink, Menu, X, Zap, Cloud, AlertTriangle, SlidersHorizontal, BarChart3, Sun, Moon, Languages, Type, Palette, CalendarClock, Flame, Search, ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../lib/AppContext';
 import { getAdminSession, adminLogout, type AdminSession } from '../lib/db';
@@ -37,6 +37,24 @@ const NAV: { to: string; en: string; ar: string; he: string; icon: typeof Layout
   { to: '/admin/users', en: 'Admin Users', ar: 'مستخدمو الإدارة', he: 'משתמשי מנהל', icon: ShieldCheck, minRole: 'owner' },
 ];
 
+
+const SETTINGS_SEARCH_TARGETS: { label: string; ar: string; he: string; keywords: string; to: string; anchor?: string; minRole: AdminPerm }[] = [
+  { label: 'Logo and logo sizing', ar: 'الشعار ومقاسه', he: 'לוגו וגודל לוגו', keywords: 'logo image fit favicon image ratio tab icon branding', to: '/admin/settings', anchor: 'logo-settings', minRole: 'owner' },
+  { label: 'Browser tab icon (favicon)', ar: 'أيقونة المتصفح', he: 'סמל לשונית הדפדפן', keywords: 'favicon browser tab icon chrome', to: '/admin/settings', anchor: 'favicon-settings', minRole: 'owner' },
+  { label: 'Social links and contacts', ar: 'روابط التواصل وبيانات الاتصال', he: 'קישורים חברתיים ואנשי קשר', keywords: 'facebook instagram tiktok gmail whatsapp contact social', to: '/admin/settings', anchor: 'social-links-settings', minRole: 'owner' },
+  { label: 'Mobile bottom navigation', ar: 'شريط التنقل السفلي للهاتف', he: 'ניווט תחתון בנייד', keywords: 'bottom bar mobile nav cart account whatsapp buttons', to: '/admin/settings', anchor: 'mobile-nav-settings', minRole: 'owner' },
+  { label: 'Payment methods and bank transfer', ar: 'طرق الدفع والتحويل البنكي', he: 'אמצעי תשלום והעברה בנקאית', keywords: 'visa mastercard card cash bank iban paypal payment', to: '/admin/settings', anchor: 'payment-settings', minRole: 'owner' },
+  { label: 'Order email notifications', ar: 'إشعارات الطلبات بالبريد', he: 'התראות הזמנה בדוא״ל', keywords: 'email gmail order notification resend message template', to: '/admin/settings', anchor: 'order-email-settings', minRole: 'owner' },
+  { label: 'Browser order notifications', ar: 'إشعارات الطلبات في المتصفح', he: 'התראות הזמנה בדפדפן', keywords: 'browser notification test permission sound push', to: '/admin/settings', anchor: 'browser-notifications-settings', minRole: 'owner' },
+  { label: 'Customer theme preference', ar: 'مظهر الزوار', he: 'ערכת נושא למבקרים', keywords: 'day night theme customer toggle light dark', to: '/admin/settings', anchor: 'customer-theme-settings', minRole: 'owner' },
+  { label: 'Delivery areas and fees', ar: 'مناطق ورسوم التوصيل', he: 'אזורי משלוח ועלויות', keywords: 'delivery shipping fee west bank jerusalem', to: '/admin/delivery', minRole: 'owner' },
+  { label: 'Store colors, fonts and interface', ar: 'ألوان وخطوط الواجهة', he: 'צבעים וגופנים', keywords: 'appearance design color font size buttons cards interface live preview', to: '/admin/appearance', minRole: 'owner' },
+  { label: 'Seasonal banners and surprises', ar: 'الإعلانات الموسمية والمفاجآت', he: 'באנרים והפתעות עונתיות', keywords: 'campaign ramadan black friday banner start end animation', to: '/admin/campaigns', minRole: 'manager' },
+  { label: 'Offer groups and sale prices', ar: 'مجموعات العروض وأسعار التخفيض', he: 'קבוצות מבצעים ומחירי מבצע', keywords: 'offers discount sale price offers page groups', to: '/admin/offers', minRole: 'manager' },
+  { label: 'Variant templates', ar: 'قوالب خيارات المنتجات', he: 'תבניות וריאנטים', keywords: 'variant template color size keyboard layout', to: '/admin/products', minRole: 'staff' },
+  { label: 'Loyalty points and personal discounts', ar: 'نقاط الولاء والخصومات الشخصية', he: 'נקודות נאמנות והנחות אישיות', keywords: 'loyalty points customers discount', to: '/admin/customers', minRole: 'manager' },
+];
+
 const RANK: Record<AdminPerm, number> = { staff: 1, manager: 2, owner: 3 };
 
 export function roleLabel(role: string, ar: boolean, he = false) {
@@ -57,6 +75,9 @@ export function AdminLayout() {
   const location = useLocation();
   const [session, setSession] = useState<AdminSession | null>(() => getAdminSession());
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingSearch, setSettingSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const pendingAnchor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!session) navigate('/admin/login', { replace: true, state: { from: location.pathname } });
@@ -70,6 +91,20 @@ export function AdminLayout() {
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
+  useEffect(() => {
+    // Prevent the admin shell from inheriting a horizontal scroll position from a wide table.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    const scrollElement = document.scrollingElement;
+    if (scrollElement) scrollElement.scrollLeft = 0;
+    const anchor = pendingAnchor.current;
+    if (!anchor) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pendingAnchor.current = null;
+    }, 140);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname]);
+
   if (!session) return null;
 
   const role = session.role as AdminPerm;
@@ -77,6 +112,19 @@ export function AdminLayout() {
   // enforce role on the current route too
   const current = NAV.find((n) => n.to === location.pathname);
   const forbidden = current && RANK[role] < RANK[current.minRole];
+
+  const searchTargets = [
+    ...allowed.map((item) => ({ label: item.en, ar: item.ar, he: item.he, keywords: `${item.en} ${item.ar} ${item.he}`, to: item.to, minRole: item.minRole as AdminPerm })),
+    ...SETTINGS_SEARCH_TARGETS.filter((item) => RANK[role] >= RANK[item.minRole]),
+  ];
+  const matchingTargets = settingSearch.trim() ? searchTargets.filter((item) => `${item.label} ${item.ar} ${item.he} ${item.keywords}`.toLowerCase().includes(settingSearch.trim().toLowerCase())).slice(0, 8) : [];
+  const openSearchTarget = (target: { to: string; anchor?: string }) => {
+    pendingAnchor.current = target.anchor ?? null;
+    setSettingSearch(''); setSearchOpen(false);
+    if (location.pathname === target.to && target.anchor) {
+      window.setTimeout(() => { document.getElementById(target.anchor!)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); pendingAnchor.current = null; }, 80);
+    } else navigate(target.to);
+  };
 
   const logout = () => { adminLogout(); setSession(null); toast('info', ar ? 'تم تسجيل الخروج' : 'Signed out'); navigate('/admin/login'); };
 
@@ -133,29 +181,38 @@ export function AdminLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-ink" dir={ar || he ? 'rtl' : 'ltr'}>
+    <div className="admin-shell flex min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-ink" data-admin-theme={db.store.adminTheme ?? 'night'} dir={ar || he ? 'rtl' : 'ltr'}>
       <OrderNotificationWatcher enabled={db.store.browserOrderNotificationsEnabled === true} sound={db.store.browserOrderNotificationSound !== false} />
       {/* desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-e border-line bg-panel lg:block">{sidebar}</aside>
 
       {/* mobile sidebar */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-[70] lg:hidden">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className={`absolute inset-y-0 ${ar || he ? 'right-0' : 'left-0'} w-64 border-e border-line bg-panel`}>{sidebar}</aside>
+        <div className="fixed inset-0 z-[70] h-dvh w-screen lg:hidden" role="presentation">
+          <button type="button" aria-label={txt('Close menu', 'إغلاق القائمة', 'סגירת תפריט')} className="absolute inset-0 h-full w-full bg-black/70 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+          <aside className={`absolute inset-y-0 ${ar || he ? 'right-0 border-l' : 'left-0 border-r'} z-[72] h-full w-72 max-w-[86vw] border-line bg-panel shadow-2xl`}>{sidebar}</aside>
         </div>
       )}
 
       {/* content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 basis-0 flex-col">
         <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-line bg-ink/95 px-4 backdrop-blur lg:hidden">
           <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-white/85 hover:bg-panel2" aria-label="Menu"><Menu size={20} /></button>
           <span className="font-display text-sm font-bold text-white">BLITZ <span className="text-electric">ADMIN</span></span>
         </div>
-        <main className="min-w-0 flex-1 p-4 sm:p-6">
-          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        <main className="admin-main min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden p-3 sm:p-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="relative w-full min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[460px]">
+              <Search size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-mute" />
+              <input aria-label={txt('Search admin settings', 'البحث في إعدادات الإدارة', 'חיפוש בהגדרות המנהל')} value={settingSearch} onFocus={() => setSearchOpen(true)} onChange={(e) => { setSettingSearch(e.target.value); setSearchOpen(true); }} onKeyDown={(e) => { if (e.key === 'Escape') { setSearchOpen(false); setSettingSearch(''); } else if (e.key === 'Enter' && matchingTargets[0]) { e.preventDefault(); openSearchTarget(matchingTargets[0]); } }} placeholder={txt('Search settings, pages, payments, notifications…', 'ابحث عن إعداد أو صفحة أو دفع أو إشعارات…', 'חפש הגדרות, עמודים, תשלומים והתראות…')} className="h-10 w-full rounded-xl border border-line bg-panel ps-9 pe-3 text-[11px] text-white outline-none focus:border-electric" />
+              {searchOpen && settingSearch.trim() && <div className="absolute inset-x-0 top-full z-[90] mt-1 max-h-[min(60vh,420px)] overflow-y-auto rounded-xl border border-line bg-panel p-1.5 shadow-2xl">
+                {matchingTargets.length ? matchingTargets.map((target, index) => <button type="button" key={`${target.to}-${'anchor' in target ? target.anchor : ''}-${index}`} onClick={() => openSearchTarget(target)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-start text-[11px] font-semibold text-white/85 hover:bg-panel2 hover:text-electric"><Search size={13} className="shrink-0 text-electric"/><span className="min-w-0 flex-1">{ar ? target.ar : he ? target.he : target.label}</span><ChevronRight size={13} className="shrink-0 text-mute"/></button>) : <p className="p-3 text-[11px] text-mute">{txt('No matching settings or pages.', 'لا توجد إعدادات أو صفحات مطابقة.', 'לא נמצאו הגדרות או עמודים מתאימים.')}</p>}
+              </div>}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <label className="flex h-9 items-center gap-2 rounded-lg border border-line bg-panel px-2.5 text-[10px] font-bold text-mute"><Languages size={14}/><select aria-label="Admin language" value={lang} onChange={(e) => setLang(e.target.value as Lang)} className="bg-transparent text-[11px] text-current outline-none"><option value="ar">العربية</option><option value="en">English</option><option value="he">עברית</option></select></label>
-            <button type="button" onClick={() => setDb((d) => ({ ...d, store: { ...d.store, theme: d.store.theme === 'day' ? 'night' : 'day' } }))} className="flex h-9 items-center gap-2 rounded-lg border border-line bg-panel px-3 text-[10px] font-bold text-mute hover:border-electric hover:text-electric">{db.store.theme === 'day' ? <Moon size={14}/> : <Sun size={14} />}{db.store.theme === 'day' ? txt('Switch to Night', 'التبديل إلى الوضع الليلي', 'מעבר למצב לילה') : txt('Switch to Day', 'التبديل إلى الوضع النهاري', 'מעבר למצב יום')}</button>
+            <button type="button" onClick={() => setDb((d) => ({ ...d, store: { ...d.store, adminTheme: (d.store.adminTheme ?? 'night') === 'day' ? 'night' : 'day' } }))} className="flex h-9 items-center gap-2 rounded-lg border border-line bg-panel px-3 text-[10px] font-bold text-mute hover:border-electric hover:text-electric">{(db.store.adminTheme ?? 'night') === 'day' ? <Moon size={14}/> : <Sun size={14} />}{(db.store.adminTheme ?? 'night') === 'day' ? txt('Switch to Night', 'التبديل إلى الوضع الليلي', 'מעבר למצב לילה') : txt('Switch to Day', 'التبديل إلى الوضع النهاري', 'מעבר למצב יום')}</button>
+            </div>
           </div>
           <div className={`mb-5 flex items-start gap-3 rounded-xl border p-3 ${cloudConfigured ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-400/35 bg-amber-400/5'}`} role="status">
             {cloudConfigured ? <Cloud size={18} className="mt-0.5 shrink-0 text-emerald-400"/> : <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-300"/>}

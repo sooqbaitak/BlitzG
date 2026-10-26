@@ -1,4 +1,5 @@
 // BLITZ GAMING — product card
+import { localizedVariantLabel } from '../lib/variants';
 import { memo, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, GitCompareArrows, ShoppingCart, Zap, Flame, Sparkles, Layers } from 'lucide-react';
@@ -116,7 +117,7 @@ function ProductCardInner({ product }: { product: Product }) {
             aria-label={lang === 'ar' ? 'اختر النوع' : 'Choose variant'}
           >
             {product.variants.map((v) => (
-              <option key={v.id} value={v.id}>{v.label}{v.priceDelta !== 0 ? ` (${v.priceDelta > 0 ? '+' : '−'}₪${Math.abs(v.priceDelta)})` : ''}</option>
+              <option key={v.id} value={v.id}>{localizedVariantLabel(v, lang)}{v.priceDelta !== 0 ? ` (${v.priceDelta > 0 ? '+' : '−'}₪${Math.abs(v.priceDelta)})` : ''}</option>
             ))}
           </select>
         )}

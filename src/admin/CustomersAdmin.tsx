@@ -1,6 +1,6 @@
 // BLITZ GAMING — customer account management (requires Supabase cloud mode)
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Ban, ChevronDown, ChevronUp, Heart, Mail, RefreshCw, Send, ShieldOff, Star, Trash2, Users, UserRound, Save, Gift } from 'lucide-react';
+import { BadgeCheck, Ban, ShoppingBag, ChevronDown, ChevronUp, Heart, Mail, RefreshCw, Send, ShieldOff, Star, Trash2, Users, UserRound, Save, Gift } from 'lucide-react';
 import { useApp } from '../lib/AppContext';
 import { Button, EmptyState, Input, SectionTitle, StatCard, TextArea } from '../components/ui';
 import { fmtDate, fmtPrice } from '../lib/i18n';
@@ -120,14 +120,25 @@ export function CustomersAdmin() {
           const draft = drafts[customer.user_id] || { display_name: customer.display_name || '', points: customer.points || 0, discount_percent: customer.discount_percent || 0, admin_note: customer.admin_note || '', account_message: customer.account_message || '' };
           const message = messages[customer.user_id] || { subject: 'A message from BLITZ GAMING', message: '' };
           const isExpanded = expanded === customer.user_id;
-          const customerOrders = Number(customer.order_count || 0);
+          const customerOrderCount = Number(customer.order_count || 0);
+          const phoneDigits = (value: string | undefined) => String(value || '').replace(/\D/g, '');
+          const customerPhoneDigits = phoneDigits(customer.phone);
+          const customerOrderHistory = db.orders.filter((order) => {
+            // Prefer the immutable account ID when an order is tied to an account.
+            if (order.userId) return order.userId === customer.user_id;
+            if (customer.email && order.email && order.email.trim().toLowerCase() === customer.email.trim().toLowerCase()) return true;
+            const orderPhoneDigits = phoneDigits(order.phone);
+            return Boolean(customerPhoneDigits.length >= 8 && orderPhoneDigits.length >= 8 && orderPhoneDigits.slice(-8) === customerPhoneDigits.slice(-8));
+          }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          const pointsEarnedRecorded = customerOrderHistory.reduce((sum, order) => sum + Number(order.loyaltyPointsEarned || 0), 0);
+          const pointsRedeemedRecorded = customerOrderHistory.reduce((sum, order) => sum + Number(order.loyaltyPointsRedeemed || 0), 0);
           return <section key={customer.user_id} className={`overflow-hidden rounded-2xl border bg-panel ${customer.highlighted ? 'border-amber-400/50' : 'border-line'}`}>
             <div className="flex flex-wrap items-center gap-3 p-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-electric to-violet-accent font-display font-bold text-white">{(customer.display_name || customer.email || customer.phone || 'C').charAt(0).toUpperCase()}</div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2"><p className="font-bold text-white">{customer.display_name || customer.email || customer.phone || txt('Customer', 'زبون', 'לקוח')}</p>{customer.highlighted && <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[9px] font-bold text-amber-300">{txt('Highlighted', 'مميز', 'מודגש')}</span>}{customer.blocked && <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[9px] font-bold text-red-300">{txt('Blocked', 'محظور', 'חסום')}</span>}</div>
                 <p className="mt-0.5 truncate text-[11px] text-mute">{customer.email || txt('No email', 'لا يوجد بريد', 'אין דוא״ל')} · {customer.phone || txt('No phone', 'لا يوجد هاتف', 'אין טלפון')}</p>
-                <p className="mt-1 text-[10px] text-mute">{customerOrders} {txt('orders', 'طلبات', 'הזמנות')} · {fmtPrice(Number(customer.lifetime_value || 0), lang)} · {txt('Joined', 'تاريخ التسجيل', 'נרשם')} {fmtDate(customer.created_at, lang)}{customer.last_order_at ? ` · ${txt('Last order', 'آخر طلب', 'הזמנה אחרונה')} ${fmtDate(customer.last_order_at, lang)}` : ''}</p>
+                <p className="mt-1 text-[10px] text-mute">{customerOrderCount} {txt('orders', 'طلبات', 'הזמנות')} · {fmtPrice(Number(customer.lifetime_value || 0), lang)} · {txt('Joined', 'تاريخ التسجيل', 'נרשם')} {fmtDate(customer.created_at, lang)}{customer.last_order_at ? ` · ${txt('Last order', 'آخر طلب', 'הזמנה אחרונה')} ${fmtDate(customer.last_order_at, lang)}` : ''}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" disabled={busyId === customer.user_id} onClick={() => void persist(customer.user_id, { highlighted: !customer.highlighted }, customer.highlighted ? txt('Highlight removed.', 'تم إلغاء التمييز.', 'ההדגשה הוסרה.') : txt('Customer highlighted.', 'تم تمييز الزبون.', 'הלקוח הודגש.'))}><Star size={13} className={customer.highlighted ? 'fill-amber-300 text-amber-300' : ''}/>{customer.highlighted ? txt('Unmark', 'إلغاء التمييز', 'בטל הדגשה') : txt('Highlight', 'تمييز', 'הדגש')}</Button>
@@ -141,6 +152,43 @@ export function CustomersAdmin() {
                 <div className="flex flex-wrap items-end gap-2"><Button variant="outline" size="sm" onClick={() => updateDraft(customer.user_id, { points: Math.max(0, draft.points - 100) })}>−100</Button><Button variant="outline" size="sm" onClick={() => updateDraft(customer.user_id, { points: draft.points + 100 })}><Gift size={13}/>+100 {txt('points', 'نقطة', 'נקודות')}</Button><span className="pb-2 text-[10px] text-mute">{txt('Adjust the balance, then save.', 'عدّل الرصيد ثم احفظ.', 'עדכן יתרה ואז שמור.')}</span></div>
                 <Input label={txt('Personal discount (%)', 'الخصم الشخصي (%)', 'הנחה אישית (%)')} type="number" min={0} max={100} step="0.5" value={draft.discount_percent} onChange={(e) => updateDraft(customer.user_id, { discount_percent: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}/>
               </div>
+              <section className="rounded-xl border border-line bg-panel p-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="flex items-center gap-2 text-[12px] font-bold text-white"><ShoppingBag size={14} className="text-electric"/>{txt('Purchase history & customer details', 'سجل المشتريات وتفاصيل الزبون', 'היסטוריית רכישות ופרטי לקוח')}</h4>
+                  <div className="flex flex-wrap gap-2 text-[10px]">
+                    <span className="rounded-lg border border-line bg-panel2 px-2 py-1 text-white/80">{txt('Points balance', 'رصيد النقاط', 'יתרת נקודות')}: <b className="text-electric">{customer.points}</b></span>
+                    <span className="rounded-lg border border-line bg-panel2 px-2 py-1 text-white/80">{txt('Points earned in matched orders', 'النقاط المكتسبة في الطلبات المطابقة', 'נקודות שנצברו בהזמנות תואמות')}: <b>{pointsEarnedRecorded}</b></span>
+                    <span className="rounded-lg border border-line bg-panel2 px-2 py-1 text-white/80">{txt('Points redeemed recorded', 'النقاط المستخدمة المسجلة', 'נקודות שמומשו ומתועדות')}: <b>{pointsRedeemedRecorded}</b></span>
+                  </div>
+                </div>
+                <div className="mb-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  <p className="rounded-lg bg-panel2 p-2 text-[10px] text-mute">{txt('Customer name', 'اسم الزبون', 'שם הלקוח')}: <strong className="text-white">{customer.display_name || txt('Not provided', 'غير متوفر', 'לא נמסר')}</strong></p>
+                  <p className="rounded-lg bg-panel2 p-2 text-[10px] text-mute">Email: <strong className="break-all text-white">{customer.email || '—'}</strong></p>
+                  <p className="rounded-lg bg-panel2 p-2 text-[10px] text-mute">{txt('Phone', 'الهاتف', 'טלפון')}: <strong className="text-white">{customer.phone || '—'}</strong></p>
+                  <p className="rounded-lg bg-panel2 p-2 text-[10px] text-mute">{txt('Account created', 'تاريخ إنشاء الحساب', 'תאריך יצירת חשבון')}: <strong className="text-white">{fmtDate(customer.created_at, lang)}</strong></p>
+                  <p className="rounded-lg bg-panel2 p-2 text-[10px] text-mute">{txt('Total spent (customer profile)', 'إجمالي الإنفاق (ملف الزبون)', 'סך הוצאות (פרופיל לקוח)')}: <strong className="text-white">{fmtPrice(Number(customer.lifetime_value || 0), lang)}</strong></p>
+                  <p className="rounded-lg bg-panel2 p-2 text-[10px] text-mute">{txt('Matched order records', 'سجلات الطلبات المطابقة', 'רשומות הזמנה תואמות')}: <strong className="text-white">{customerOrderHistory.length}</strong></p>
+                </div>
+                {customerOrderHistory.length ? <div className="space-y-3">{customerOrderHistory.map((order) => <article key={order.id} className="overflow-hidden rounded-xl border border-line">
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-panel2 p-3"><div><p className="text-[11px] font-bold text-white">{order.number}</p><p className="mt-0.5 text-[9px] text-mute">{fmtDate(order.createdAt, lang)} · {order.status.toUpperCase()} · {order.paymentStatus || order.payment}</p></div><div className="text-end"><p className="text-[12px] font-extrabold text-electric">{fmtPrice(order.total, lang)}</p><p className="text-[9px] text-mute">{txt('Earned', 'مكتسب', 'נצבר')}: {order.loyaltyPointsEarned ?? '—'} · {txt('Used', 'مستخدم', 'נוצל')}: {order.loyaltyPointsRedeemed ?? '—'}</p></div></div>
+                  <div className="grid gap-3 p-3 md:grid-cols-2">
+                    <div><p className="mb-1 text-[10px] font-bold text-white/80">{txt('Items purchased', 'المنتجات المشتراة', 'מוצרים שנרכשו')}</p><div className="space-y-1.5">{order.items.map((item, itemIndex) => <div key={`${order.id}-${item.productId}-${item.variantId || ''}-${itemIndex}`} className="flex items-start gap-2 text-[10px]"><img src={item.image} alt="" className="h-9 w-9 rounded-md border border-line object-contain"/><div className="min-w-0 flex-1"><p className="font-semibold text-white">{item.name}</p>{item.variantLabel && <p className="text-mute">{item.variantLabel}</p>}<p className="text-mute">{item.sku} · {item.qty} × {fmtPrice(item.unitPrice, lang)}</p></div><span className="shrink-0 text-white/80">{fmtPrice(item.unitPrice * item.qty, lang)}</span></div>)}</div></div>
+                    <div><p className="mb-1 text-[10px] font-bold text-white/80">{txt('Checkout details', 'تفاصيل إتمام الطلب', 'פרטי תשלום והזמנה')}</p><div className="space-y-1 text-[10px] text-mute">
+                      <p>{txt('Recipient', 'المستلم', 'נמען')}: <strong className="text-white">{order.customerName}</strong></p>
+                      <p>{txt('Phone', 'الهاتف', 'טלפון')}: <strong className="text-white">{order.phone}</strong> · <span>{order.email || '—'}</span></p>
+                      <p>{txt('Address', 'العنوان', 'כתובת')}: <strong className="text-white">{[order.city, order.address, order.areaName || order.area].filter(Boolean).join(', ') || '—'}</strong></p>
+                      <p>{txt('Build choice', 'خيار التجميعة', 'בחירת הרכבה')}: <strong className="text-white">{order.buildPreference === 'assemble' ? txt('Build the PC', 'تجميع الكمبيوتر', 'הרכבת מחשב') : order.buildPreference === 'parts' ? txt('Parts only', 'قطع فقط', 'חלקים בלבד') : '—'}</strong></p>
+                      <p>{txt('Coupon', 'كود الخصم', 'קופון')}: <strong className="text-white">{order.couponCode || '—'}</strong> · {txt('Discount', 'الخصم', 'הנחה')}: <strong className="text-white">{fmtPrice(order.discount, lang)}</strong></p>
+                      <p>{txt('Shipping', 'التوصيل', 'משלוח')}: <strong className="text-white">{fmtPrice(order.deliveryFee, lang)}</strong> · {txt('Subtotal', 'المجموع الفرعي', 'סכום ביניים')}: <strong className="text-white">{fmtPrice(order.productSubtotal, lang)}</strong></p>
+                      <p>{txt('Courier', 'مندوب التوصيل', 'שליח')}: <strong className="text-white">{order.deliveryPersonName || '—'}</strong> · {order.deliveryPersonPhone || '—'}</p>
+                      {order.trackingMessage && <p>{txt('Delivery update', 'تحديث التوصيل', 'עדכון משלוח')}: <strong className="text-white">{order.trackingMessage}</strong></p>}
+                      {order.trackingUrl && <p className="break-all">{txt('Tracking', 'التتبع', 'מעקב')}: <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="text-electric underline">{order.trackingUrl}</a></p>}
+                      {order.notes && <p>{txt('Customer notes', 'ملاحظات الزبون', 'הערות לקוח')}: <strong className="text-white">{order.notes}</strong></p>}
+                    </div></div>
+                  </div>
+                </article>)}</div> : <p className="rounded-lg border border-dashed border-line p-4 text-[10px] text-mute">{txt('No matching order details were found in the currently loaded order history. Matching uses account ID, email and the last digits of the phone number.', 'لم يتم العثور على تفاصيل طلبات مطابقة ضمن سجل الطلبات المحمّل. تتم المطابقة عبر رقم الحساب والبريد وآخر أرقام الهاتف.', 'לא נמצאו פרטי הזמנות תואמים בהיסטוריה הטעונה. ההתאמה מבוססת על מזהה חשבון, דוא״ל וספרות אחרונות של הטלפון.')}</p>}
+                <p className="mt-2 text-[9px] text-mute">{txt('Note: redeemed-point totals show only orders that actually recorded point redemption; older orders may not contain this field.', 'ملاحظة: مجموع النقاط المستخدمة يعرض فقط الطلبات التي سجلت الاستبدال؛ قد لا يحتوي الحقل على الطلبات القديمة.', 'הערה: סכום הנקודות שמומשו כולל רק הזמנות שרשמו מימוש; ייתכן שהזמנות ישנות אינן כוללות שדה זה.')}</p>
+              </section>
               <TextArea label={txt('Private admin note (not visible to customer)', 'ملاحظة إدارية خاصة (لا تظهر للزبون)', 'הערת מנהל פרטית (לא מוצגת ללקוח)')} value={draft.admin_note} onChange={(e) => updateDraft(customer.user_id, { admin_note: e.target.value })} rows={2}/>
               <TextArea label={txt('Message shown in the customer account', 'رسالة تظهر في حساب الزبون', 'הודעה שמוצגת בחשבון הלקוח')} value={draft.account_message} onChange={(e) => updateDraft(customer.user_id, { account_message: e.target.value })} rows={2}/>
               <div className="flex flex-wrap gap-2"><Button loading={busyId === customer.user_id} onClick={() => void persist(customer.user_id, { display_name: draft.display_name, points: draft.points, discount_percent: draft.discount_percent, admin_note: draft.admin_note, account_message: draft.account_message })}><Save size={14}/>{txt('Save customer', 'حفظ بيانات الزبون', 'שמור לקוח')}</Button><Button variant="outline" disabled={busyId === customer.user_id} onClick={() => void persist(customer.user_id, { blocked: !customer.blocked }, customer.blocked ? txt('Account unblocked.', 'تم إلغاء حظر الحساب.', 'החסימה הוסרה.') : txt('Account blocked.', 'تم حظر الحساب.', 'החשבון נחסם.'))}>{customer.blocked ? <ShieldOff size={14}/> : <Ban size={14} />}{customer.blocked ? txt('Unblock account', 'إلغاء الحظر', 'בטל חסימה') : txt('Block account', 'حظر الحساب', 'חסום חשבון')}</Button><Button variant="danger" disabled={busyId === customer.user_id} onClick={() => void deleteCustomer(customer)}><Trash2 size={14}/>{txt('Delete account', 'حذف الحساب', 'מחק חשבון')}</Button></div>

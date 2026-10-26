@@ -1,4 +1,5 @@
 // BLITZ GAMING — cart page (persistent, editable quantities, discounts, totals)
+import { localizedVariantLabel } from '../lib/variants';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingCart, Zap, BadgePercent, X, ShieldCheck, Truck } from 'lucide-react';
@@ -98,7 +99,7 @@ export function Cart() {
                 </Link>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <Link to={`/product/${product.slug}`} className="line-clamp-2 text-[13px] font-semibold text-white/90 hover:text-electric">{productName(product, lang)}</Link>
-                  <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-mute">{t('sku')}: {product.sku}{variant ? ` · ${variant.label}` : ''}</span>
+                  <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-mute">{t('sku')}: {product.sku}{variant ? ` · ${localizedVariantLabel(variant, lang)}` : ''}</span>
                   <span className="mt-1 font-display text-base font-bold text-electric">{fmtPrice(price, lang)}</span>
                   <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                     <div className="flex items-center rounded-xl border border-line bg-panel2">

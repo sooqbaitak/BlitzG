@@ -1,4 +1,5 @@
 // BLITZ GAMING — live cart drawer
+import { localizedVariantLabel } from '../lib/variants';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingCart, Zap, Trash } from 'lucide-react';
@@ -62,7 +63,7 @@ export function CartDrawer() {
                         </Link>
                         <div className="flex min-w-0 flex-1 flex-col">
                           <Link to={`/product/${product.slug}`} onClick={() => setDrawerOpen(false)} className="line-clamp-2 text-[12px] font-semibold leading-snug text-white/90 hover:text-electric">{productName(product, lang)}</Link>
-                          {variant && <span className="mt-0.5 text-[10px] text-mute">{variant.label}</span>}
+                          {variant && <span className="mt-0.5 text-[10px] text-mute">{localizedVariantLabel(variant, lang)}</span>}
                           <div className="mt-auto flex items-center justify-between pt-1.5">
                             <div className="flex items-center rounded-lg border border-line">
                               <button onClick={() => setQty(line.productId, line.variantId, line.qty - 1)} className="p-1.5 text-white/80 hover:text-electric" aria-label="Decrease"><Minus size={13} /></button>

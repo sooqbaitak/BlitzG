@@ -1,4 +1,5 @@
 // BLITZ GAMING — product detail page
+import { localizedVariantLabel } from '../lib/variants';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate, Navigate } from 'react-router-dom';
 import { Heart, GitCompareArrows, ShoppingCart, Zap, Truck, ShieldCheck, RotateCcw, ChevronRight, Minus, Plus, Check, Sparkles } from 'lucide-react';
@@ -138,7 +139,7 @@ export function ProductDetail() {
                     onClick={() => { setVariantId(v.id); setQty(1); if (v.imageIndex !== undefined && product.images[v.imageIndex]) setActiveImg(v.imageIndex); }}
                     className={`relative flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-[12px] font-semibold transition-all ${variantId === v.id ? 'border-electric bg-electric/15 text-electric shadow-[0_0_0_1px_#00a8ff]' : 'border-line bg-panel2 text-white/85 hover:border-electric/60'}`}
                   >
-                    {v.label}{v.priceDelta !== 0 && <span className="text-mute">({v.priceDelta > 0 ? '+' : '−'}₪{Math.abs(v.priceDelta)})</span>}
+                    {localizedVariantLabel(v, lang)}{v.priceDelta !== 0 && <span className="text-mute">({v.priceDelta > 0 ? '+' : '−'}₪{Math.abs(v.priceDelta)})</span>}
                     {variantId === v.id && <Check size={13} strokeWidth={3} />}
                   </button>
                 ))}
