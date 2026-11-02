@@ -1,0 +1,1 @@
+BLITZ GAMING verification code: {{ .Code }}. Enter it on the website to sign in. Do not share this code with anyone.

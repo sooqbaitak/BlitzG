@@ -1,0 +1,430 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// BLITZ GAMING — data types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: string;
+  slug: string;
+  nameEn: string;
+  nameAr: string;
+  nameHe?: string;
+  image?: string;
+  parentId: string | null;
+  order: number;
+  visible: boolean;
+  featured: boolean;
+  /** Preferred rendering for non-standard category banner imagery. */
+  imageFit?: 'cover' | 'contain' | 'fill';
+}
+
+export interface Brand {
+  id: string;
+  slug: string;
+  name: string;
+  visible: boolean;
+  featured: boolean;
+}
+
+export interface ProductVariant {
+  id: string;
+  label: string;
+  /** Optional localized customer-facing labels; fall back to label when blank. */
+  labelEn?: string;
+  labelAr?: string;
+  labelHe?: string;
+  optionNameEn?: string;
+  optionNameAr?: string;
+  optionNameHe?: string;
+  optionValueEn?: string;
+  optionValueAr?: string;
+  optionValueHe?: string;
+  attributesEn?: Record<string, string>;
+  attributesAr?: Record<string, string>;
+  attributesHe?: Record<string, string>;
+  priceDelta: number; // add-on on top of base price (ILS)
+  stock: number;
+  /** Optional attribute group/value used by customizable variant selectors. */
+  optionName?: string;
+  optionValue?: string;
+  /** Zero-based index into Product.images; selecting this variant shows the linked image. */
+  imageIndex?: number;
+  /** Optional multi-attribute variant facets, e.g. { Color: 'White', Layout: '60%' }. */
+  attributes?: Record<string, string>;
+}
+
+export interface VariantTemplate {
+  id: string;
+  name: string;
+  variant: Omit<ProductVariant, 'id' | 'stock'>;
+}
+
+export interface OfferCollection {
+  id: string;
+  name: string;
+  tag: string;
+  active: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  /** 'single' discounts products individually; 'group' activates only when every selected product is in the cart. */
+  type?: 'single' | 'group';
+  /** Product IDs mapped to individual offer prices (single type), or 0 for membership (group type). */
+  productPrices: Record<string, number>;
+  /** Combined fixed ILS price for a complete group offer. */
+  bundlePrice?: number;
+  /** Baseline sale price to restore if a member is removed from a bundle. */
+  originalSalePrices?: Record<string, number | null>;
+}
+
+export interface Product {
+  id: string;
+  sku: string;
+  slug: string;
+  nameEn: string;
+  nameAr: string;
+  brandId: string;
+  categoryId: string; // primary category
+  /** Additional category/subcategory assignments, excluding categoryId when convenient. */
+  categoryIds?: string[];
+  price: number;
+  salePrice: number | null;
+  /** Optional per-unit acquisition cost (ILS), visible to admins only. */
+  costPrice?: number | null;
+  /** Optional loyalty points awarded per purchased unit; undefined uses store default. */
+  loyaltyPoints?: number;
+  stock: number;
+  images: string[];
+  descEn: string;
+  descAr: string;
+  descHe?: string;
+  specs: { key: string; value: string }[];
+  variants: ProductVariant[];
+  tags: ('featured' | 'bestseller' | 'new' | 'deal' | 'combo' | 'popular')[];
+  customTags?: string[];
+  status: 'active' | 'draft' | 'archived';
+  rating: number;
+  sold: number;
+  createdAt: string;
+  lowStockAt?: number;
+}
+
+export type CouponTarget = 'products' | 'delivery';
+export type CouponType = 'percent' | 'fixed';
+
+export interface Coupon {
+  id: string;
+  code: string;
+  description: string;
+  type: CouponType;
+  value: number;
+  target: CouponTarget;
+  minSubtotal: number;
+  productIds: string[];      // empty + categoryIds empty => all products
+  categoryIds: string[];
+  startsAt: string;          // ISO date
+  expiresAt: string;         // ISO date
+  usageLimit: number | null; // null = unlimited
+  perCustomerLimit: number | null;
+  usedCount: number;
+  active: boolean;
+  category?: 'standard' | 'loyalty';
+  pointsCost?: number;
+}
+
+export type DeliveryArea = 'westbank' | 'jerusalem' | 'inside48' | (string & {});
+
+export interface DeliveryLocation { id: string; nameEn: string; nameAr: string; nameHe?: string; fee: number; active: boolean; freeDeliveryThreshold?: number | null }
+
+export interface OrderItem {
+  productId: string;
+  categoryId?: string;
+  categoryIds?: string[];
+  brandId?: string;
+  variantId?: string;
+  sku: string;
+  name: string;
+  variantLabel?: string;
+  qty: number;
+  unitPrice: number;
+  /** Cost snapshot at the time of sale, absent when cost was not entered. */
+  unitCost?: number;
+  image: string;
+}
+
+export interface OrderStatusEvent { status: 'new' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'; at: string; message?: string }
+
+export interface Order {
+  id: string;
+  number: string;
+  createdAt: string;
+  customerName: string;
+  phone: string;
+  email?: string;
+  area: DeliveryArea;
+  areaName?: string;
+  buildPreference?: 'assemble' | 'parts';
+  userId?: string;
+  loyaltyPointsEarned?: number;
+  /** Points redeemed against this order, if loyalty redemption was used. */
+  loyaltyPointsRedeemed?: number;
+  loyaltyRewardId?: string;
+  personalDiscount?: number;
+  city: string;
+  address: string;
+  notes?: string;
+  items: OrderItem[];
+  productSubtotal: number;
+  discount: number;
+  deliveryFee: number;
+  total: number;
+  couponCode?: string;
+  payment: 'cod' | 'card' | 'paypal' | 'apple_pay' | 'google_pay' | 'bank_transfer';
+  /** Payment state is separate from delivery/order fulfillment status. */
+  paymentStatus?: 'pay_on_delivery' | 'awaiting_payment' | 'awaiting_transfer' | 'paid' | 'failed' | 'cancelled';
+  paymentReference?: string;
+  status: 'new' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  statusUpdatedAt?: string;
+  statusHistory?: OrderStatusEvent[];
+  carrierName?: string;
+  trackingUrl?: string;
+  deliveryPersonName?: string;
+  deliveryPersonPhone?: string;
+  trackingMessage?: string;
+}
+
+export type AdminRole = 'owner' | 'manager' | 'staff';
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  name: string;
+  role: AdminRole;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface DeliverySettings {
+  westbank: number;
+  jerusalem: number;
+  inside48: number;
+  /** Optional minimum product subtotal for free delivery; 0/null/undefined disables it. */
+  westbankFreeDeliveryThreshold?: number | null;
+  jerusalemFreeDeliveryThreshold?: number | null;
+  inside48FreeDeliveryThreshold?: number | null;
+  additionalAreas?: DeliveryLocation[];
+}
+
+export interface SocialLink { id: string; label: string; url: string; platform?: string; active?: boolean }
+export interface FooterCompanyLink { id: string; labelEn: string; labelAr: string; labelHe?: string; url: string; active: boolean }
+export interface AnnouncementSlot { id: string; textEn: string; textAr: string; textHe?: string; url?: string; active: boolean }
+export interface LocalizedOverride { en?: string; ar?: string; he?: string }
+
+export interface HomeHeroSlide {
+  id: string;
+  kind: 'image' | 'video';
+  url: string;
+  active: boolean;
+  altEn?: string;
+  altAr?: string;
+  altHe?: string;
+}
+
+export interface StoreAppearance {
+  accent: string; accentHover: string; secondaryAccent: string; background: string; panel: string; panelAlt: string; border: string; text: string; muted: string;
+  bodyFont: string; displayFont: string; radius: 'compact' | 'rounded' | 'soft';
+  /** Global typography scale, site header treatment, card depth and primary button style. */
+  textScale: 'compact' | 'standard' | 'large';
+  headerStyle: 'solid' | 'glass';
+  cardStyle: 'glow' | 'bordered' | 'flat';
+  buttonStyle: 'solid' | 'gradient' | 'outline';
+}
+
+export type CampaignPlacement = 'top-banner' | 'floating' | 'modal' | 'side-banner' | 'corner-oblique';
+export type CampaignAnimation = 'fade' | 'slide' | 'pulse' | 'bounce' | 'glow' | 'none';
+export interface SeasonalCampaign {
+  id: string; active: boolean; placement: CampaignPlacement; animation: CampaignAnimation;
+  titleEn: string; titleAr: string; titleHe?: string; messageEn: string; messageAr: string; messageHe?: string;
+  imageUrl?: string; linkUrl?: string; backgroundColor: string; textColor: string;
+  fontFamily?: string; fontSize?: number; animationDurationSeconds?: number;
+  position?: 'start-top' | 'end-top' | 'start-bottom' | 'end-bottom';
+  widthPreset?: 'compact' | 'standard' | 'wide';
+  /** Explicit width/height in CSS pixels for banner/popup placements. */
+  widthPx?: number;
+  heightPx?: number;
+  /** If true, the full visible campaign surface is clickable when linkUrl is set. */
+  fullBannerClickable?: boolean;
+  borderRadiusPx?: number;
+  startsAt?: string; endsAt?: string; pageTargets: string[]; dismissible: boolean;
+  /** Optional named offer collection associated with this campaign. */
+  offerCollectionId?: string;
+}
+
+export type MobileBottomBarItemId = 'home' | 'shop' | 'account' | 'wishlist' | 'cart' | 'whatsapp' | 'track' | 'build' | 'theme';
+export interface FooterContent {
+  descriptionEn?: string; descriptionAr?: string; descriptionHe?: string;
+  trustCashEn?: string; trustCashAr?: string; trustCashHe?: string;
+  trustDeliveryEn?: string; trustDeliveryAr?: string; trustDeliveryHe?: string;
+  trustSupportEn?: string; trustSupportAr?: string; trustSupportHe?: string;
+  trustGamingEn?: string; trustGamingAr?: string; trustGamingHe?: string;
+  shopHeadingEn?: string; shopHeadingAr?: string; shopHeadingHe?: string;
+  companyHeadingEn?: string; companyHeadingAr?: string; companyHeadingHe?: string;
+  deliveryHeadingEn?: string; deliveryHeadingAr?: string; deliveryHeadingHe?: string;
+  deliveryNoteEn?: string; deliveryNoteAr?: string; deliveryNoteHe?: string;
+  copyrightEn?: string; copyrightAr?: string; copyrightHe?: string;
+  sloganEn?: string; sloganAr?: string; sloganHe?: string;
+}
+
+export type PaymentMethodId = 'cod' | 'card' | 'paypal' | 'apple_pay' | 'google_pay' | 'bank_transfer';
+export interface PaymentMethodToggle { id: PaymentMethodId; enabled: boolean }
+export interface BankTransferDetails { bankName: string; accountHolder: string; accountNumber: string; iban: string; swiftBic: string; instructionsEn: string; instructionsAr: string; instructionsHe: string }
+
+export interface VideoAd {
+  id: string;
+  titleEn: string;
+  titleAr: string;
+  titleHe?: string;
+  descriptionEn?: string;
+  descriptionAr?: string;
+  descriptionHe?: string;
+  videoUrl: string;
+  posterUrl?: string;
+  active: boolean;
+  featured?: boolean;
+  productIds: string[];
+  categoryIds: string[];
+  brandIds: string[];
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface LoyaltyRewardRule {
+  id: string;
+  nameEn: string; nameAr: string; nameHe?: string;
+  pointsRequired: number;
+  kind: 'discount' | 'free-delivery';
+  discountAmount?: number;
+  active: boolean;
+}
+
+export interface StoreSettings {
+  nameEn: string;
+  nameAr: string;
+  nameHe?: string;
+  nameWordColors?: string[];
+  subtitleEn?: string;
+  subtitleAr?: string;
+  subtitleHe?: string;
+  languageVisibility?: { en: boolean; ar: boolean; he: boolean };
+  whatsapp: string;
+  phone: string;
+  email: string;
+  facebook: string;
+  instagram: string;
+  addressEn: string;
+  addressAr: string;
+  addressHe?: string;
+  hoursEn: string;
+  hoursAr: string;
+  hoursHe?: string;
+  announcementEn: string;
+  announcementAr: string;
+  announcementHe?: string;
+  announcementItems?: AnnouncementSlot[];
+  announcementBgColor?: string;
+  announcementTextColor?: string;
+  announcementFontSize?: number;
+  announcementSpeedSeconds?: number;
+  announcementFontWeight?: 'normal' | 'medium' | 'bold';
+  announcementBorderColor?: string;
+  announcementPauseOnHover?: boolean;
+  announcementShowIcon?: boolean;
+  theme?: 'night' | 'day';
+  /** Admin dashboard theme, independent from the customer storefront theme. */
+  adminTheme?: 'night' | 'day';
+  /** Reusable localized variant templates saved by admins. */
+  variantTemplates?: VariantTemplate[];
+  /** Persisted admin sidebar order, stored by route path. */
+  adminMenuOrder?: string[];
+  /** Named multi-product offers used by the Offers page and campaign links. */
+  offerCollections?: OfferCollection[];
+  /** If disabled, visitors use the store's default theme. */
+  allowCustomerThemeToggle?: boolean;
+  appearance?: StoreAppearance;
+  seasonalCampaigns?: SeasonalCampaign[];
+  browserOrderNotificationsEnabled?: boolean;
+  browserOrderNotificationSound?: boolean;
+  uiTextOverrides?: Record<string, LocalizedOverride>;
+  footerContent?: FooterContent;
+  /** Localized text for editable homepage hero and promotional sections. */
+  homeContent?: Record<string, LocalizedOverride>;
+  homeHeroImageUrl?: string;
+  homePcBuildImageUrl?: string;
+  logoUrl?: string;
+  logoAspectRatio?: 'natural' | 'square' | 'wide' | 'landscape' | 'portrait';
+  logoObjectFit?: 'contain' | 'cover' | 'fill';
+  faviconUrl?: string;
+  mobileBottomBarItems?: MobileBottomBarItemId[];
+  homeHeroSlides?: HomeHeroSlide[];
+  homeHeroIntervalSeconds?: number;
+  homeHeroAutoplay?: boolean;
+  homeHeroShowControls?: boolean;
+  homeHeroTransition?: 'fade' | 'slide';
+  loyaltyPointsPer10Ils?: number;
+  /** Keep spend-based points disabled until the owner enables them. Product-level points remain active. */
+  loyaltyPointsPer10IlsEnabled?: boolean;
+  loyaltyPointsNameEn?: string;
+  loyaltyPointsNameAr?: string;
+  loyaltyPointsNameHe?: string;
+  customerPhoneLoginEnabled?: boolean;
+  checkoutFreeDeliveryNoticeEnabled?: boolean;
+  /** Ordered menu identifiers; the All Categories entry is represented by __all_categories__. */
+  mainMenuOrder?: string[];
+  footerCompanyLinks?: FooterCompanyLink[];
+  loyaltyRewardRules?: LoyaltyRewardRule[];
+  /** Customer-facing product-ad video library; visibility is controlled separately. */
+  videoAdsPageEnabled?: boolean;
+  videoAds?: VideoAd[];
+  socialLinks?: SocialLink[];
+  orderNotificationEmail?: string;
+  orderEmailSubject?: string;
+  orderEmailTemplate?: string;
+  buildSetupCategoryIds?: string[];
+  buildSetupNoticeEn?: string;
+  buildSetupNoticeAr?: string;
+  buildSetupNoticeHe?: string;
+  /** Admin-controlled checkout payment options; only COD is initially enabled. */
+  paymentMethods?: PaymentMethodToggle[];
+  /** Bank transfer details are intentionally public, since customers need them to transfer funds. */
+  bankTransferDetails?: BankTransferDetails;
+}
+
+export interface PageBlock {
+  id: string;
+  slug: string;
+  titleEn: string;
+  titleAr: string;
+  titleHe?: string;
+  bodyEn: string;
+  bodyAr: string;
+  bodyHe?: string;
+  visible: boolean;
+}
+
+export interface Db {
+  categories: Category[];
+  brands: Brand[];
+  products: Product[];
+  coupons: Coupon[];
+  orders: Order[];
+  admins: AdminUser[];
+  delivery: DeliverySettings;
+  store: StoreSettings;
+  pages: PageBlock[];
+  couponUses: { couponId: string; phone: string; at: string }[];
+}
+
+export interface CartLine {
+  productId: string;
+  variantId: string | null;
+  qty: number;
+}

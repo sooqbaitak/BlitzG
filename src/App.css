@@ -1,0 +1,7 @@
+
+/* Prevent narrow phones from widening the document when a header or card has long content. */
+#root { width: 100%; min-width: 0; max-width: 100%; }
+img, video, canvas, svg { max-width: 100%; }
+@media (max-width: 389px) {
+  .font-display { overflow-wrap: anywhere; }
+}
